@@ -85,9 +85,32 @@ def predict_image(img):
 @st.cache_resource
 def load_prediction_model():
     try:
-        return load_model('my_model.keras')
-    except:
-        st.error("Error loading model. Make sure 'my_model.keras' is in the same directory as this script.")
+        # Try different path options for the model
+        import os
+        
+        # Option 1: Current directory
+        if os.path.exists('my_model.keras'):
+            return load_model('my_model.keras')
+        
+        # Option 2: Absolute path from your project structure
+        project_dir = os.path.dirname(os.path.abspath(__file__))
+        model_path = os.path.join(project_dir, 'my_model.keras')
+        
+        if os.path.exists(model_path):
+            return load_model(model_path)
+            
+        # Option 3: Go up one directory and try to find the model
+        parent_dir = os.path.dirname(project_dir)
+        parent_model_path = os.path.join(parent_dir, 'my_model.keras')
+        
+        if os.path.exists(parent_model_path):
+            return load_model(parent_model_path)
+            
+        # Show more detailed error
+        st.error(f"Could not find model file. Searched in:\n- {os.getcwd()}\n- {project_dir}\n- {parent_dir}")
+        return None
+    except Exception as e:
+        st.error(f"Error loading model: {str(e)}")
         return None
 
 # Main app logic
