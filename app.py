@@ -46,6 +46,11 @@ st.markdown("""
         color: #0b7285;
         border: 1px solid #99e9f2;
     }
+    .neither {
+        background-color: #fff5f5;
+        color: #c92a2a;
+        border: 1px solid #ffc9c9;
+    }
     .stImage > img {
         border-radius: 0.5rem;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -113,6 +118,9 @@ def load_prediction_model():
         st.error(f"Error loading model: {str(e)}")
         return None
 
+# Confidence threshold for classification
+CONFIDENCE_THRESHOLD = 0.70  # 70% confidence required to classify as elephant or bison
+
 # Main app logic
 model = load_prediction_model()
 
@@ -152,17 +160,32 @@ if model:
         predicted_class = class_names[predicted_class_index]
         confidence = float(prediction[0][predicted_class_index]) * 100
         
-        # Create a colored box based on the prediction
-        box_class = "elephant" if predicted_class == "Elephant" else "bison"
-        animal_emoji = "🐘" if predicted_class == "Elephant" else "🦬"
-        
-        st.markdown(f"<div class='prediction-box {box_class}'>{animal_emoji} {predicted_class} ({confidence:.2f}%)</div>", 
-                    unsafe_allow_html=True)
+        # Determine if the image contains neither an elephant nor a bison
+        if confidence < CONFIDENCE_THRESHOLD * 100:
+            # Low confidence means it's likely neither
+            st.markdown(f"<div class='prediction-box neither'>❓ Neither Elephant nor Bison ({confidence:.2f}%)</div>", 
+                        unsafe_allow_html=True)
+            
+            st.warning("""
+            This image doesn't appear to contain either an elephant or a bison.
+            The model isn't confident in its prediction.
+            Please try uploading a clearer image of an elephant or a bison.
+            """)
+        else:
+            # Create a colored box based on the prediction
+            box_class = "elephant" if predicted_class == "Elephant" else "bison"
+            animal_emoji = "🐘" if predicted_class == "Elephant" else "🦬"
+            
+            st.markdown(f"<div class='prediction-box {box_class}'>{animal_emoji} {predicted_class} ({confidence:.2f}%)</div>", 
+                        unsafe_allow_html=True)
         
         # Show confidence bars for both classes
         st.markdown("### Confidence Levels:")
         st.progress(float(prediction[0][0]), text=f"Bison: {float(prediction[0][0]) * 100:.2f}%")
         st.progress(float(prediction[0][1]), text=f"Elephant: {float(prediction[0][1]) * 100:.2f}%")
+        
+        # Display threshold information
+        st.info(f"Note: A confidence level of at least {CONFIDENCE_THRESHOLD*100}% is required to classify an image as either an elephant or a bison.")
         
     # Example functionality
     elif elephant_example:
@@ -191,6 +214,7 @@ with st.expander("About this app"):
     3. A pre-trained deep learning model processes the image
     4. The model outputs probabilities for each class
     5. The class with the highest probability is selected as the prediction
+    6. If the confidence is below 70%, the image is classified as "Neither"
     
     **Note:** For best results, use clear images of elephants or bisons with minimal background distraction.
     """)
